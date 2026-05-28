@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useCallback } from 'react';
+import { saveStory as saveLocalStory } from '@/lib/client-storage';
 
 interface PageFormData {
   text: string;
@@ -172,19 +173,28 @@ export function StoryEditor() {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/stories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          pages: formData.pages.map((p, i) => ({
-            pageNumber: i + 1,
-            ...p,
-          })),
-        }),
-      });
-      const newStory = await res.json();
-      setStories([newStory, ...stories]);
+      const storyPayload = {
+        ...formData,
+        pages: formData.pages.map((p, i) => ({
+          pageNumber: i + 1,
+          ...p,
+        })),
+      };
+
+      try {
+        const res = await fetch('/api/stories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(storyPayload),
+        });
+        const newStory = await res.json();
+        setStories([newStory, ...stories]);
+      } catch {
+        // API unavailable — save to localStorage instead
+        console.warn('API unavailable, saving to client-side storage');
+        const saved = saveLocalStory(storyPayload as any);
+        setStories([saved, ...stories]);
+      }
       setCurrentView('library');
     } catch (err) {
       console.error('Error saving story:', err);

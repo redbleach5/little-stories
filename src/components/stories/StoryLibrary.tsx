@@ -17,6 +17,7 @@ import {
 import { Heart, BookOpen, Clock, User, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { getStories as getLocalStories, saveStory as saveLocalStory, deleteStory as deleteLocalStory, seedDemoStories } from '@/lib/client-storage';
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Русские народные': 'bg-amber-100 text-amber-800 border-amber-200',
@@ -60,18 +61,27 @@ export function StoryLibrary() {
   const loadStories = async () => {
     setIsLoading(true);
     try {
-      let res = await fetch('/api/stories');
-      let data = await res.json();
+      // Try API first
+      try {
+        let res = await fetch('/api/stories');
+        let data = await res.json();
 
-      // Seed demo stories if empty
-      if (data.length === 0 && !seeded) {
-        await fetch('/api/seed', { method: 'POST' });
-        res = await fetch('/api/stories');
-        data = await res.json();
-        setSeeded(true);
+        // Seed demo stories via API if empty
+        if (data.length === 0 && !seeded) {
+          await fetch('/api/seed', { method: 'POST' });
+          res = await fetch('/api/stories');
+          data = await res.json();
+          setSeeded(true);
+        }
+
+        setStories(data);
+      } catch {
+        // API unavailable — fall back to localStorage
+        console.warn('API unavailable, using client-side storage');
+        seedDemoStories();
+        const localStories = getLocalStories();
+        setStories(localStories);
       }
-
-      setStories(data);
     } catch (err) {
       console.error('Error loading stories:', err);
     } finally {
@@ -91,28 +101,32 @@ export function StoryLibrary() {
 
   const toggleFavorite = async (e: React.MouseEvent, story: Story) => {
     e.stopPropagation();
+    const newFavorite = !story.isFavorite;
+    // Optimistic update
+    setStories(stories.map(s =>
+      s.id === story.id ? { ...s, isFavorite: newFavorite } : s
+    ));
     try {
       await fetch(`/api/stories/${story.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isFavorite: !story.isFavorite }),
+        body: JSON.stringify({ isFavorite: newFavorite }),
       });
-      setStories(stories.map(s =>
-        s.id === story.id ? { ...s, isFavorite: !s.isFavorite } : s
-      ));
-    } catch (err) {
-      console.error('Error toggling favorite:', err);
+    } catch {
+      // API unavailable — persist to localStorage
+      saveLocalStory({ ...story, isFavorite: newFavorite });
     }
   };
 
   const deleteStory = async (story: Story) => {
     try {
       await fetch(`/api/stories/${story.id}`, { method: 'DELETE' });
-      setStories(stories.filter(s => s.id !== story.id));
-      setDeleteTarget(null);
-    } catch (err) {
-      console.error('Error deleting story:', err);
+    } catch {
+      // API unavailable — delete from localStorage
+      deleteLocalStory(story.id);
     }
+    setStories(stories.filter(s => s.id !== story.id));
+    setDeleteTarget(null);
   };
 
   return (

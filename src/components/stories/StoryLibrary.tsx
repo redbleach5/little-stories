@@ -19,20 +19,22 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { getStories as getLocalStories, saveStory as saveLocalStory, deleteStory as deleteLocalStory, seedDemoStories } from '@/lib/client-storage';
 
+// Soft pastel palette — warm, gentle, child-friendly
 const CATEGORY_COLORS: Record<string, string> = {
-  'Русские народные': 'bg-amber-100 text-amber-800 border-amber-200',
-  'Авторские': 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  'Сказки народов мира': 'bg-sky-100 text-sky-800 border-sky-200',
-  'Обучающие': 'bg-violet-100 text-violet-800 border-violet-200',
+  'Русские народные': 'bg-peach-100 text-orange-700 border-orange-200',
+  'Авторские': 'bg-mint-50 text-teal-700 border-teal-200',
+  'Сказки народов мира': 'bg-lavender-50 text-purple-700 border-purple-200',
+  'Обучающие': 'bg-sky-50 text-sky-700 border-sky-200',
 };
 
+// Warm, gentle pastel gradients for covers
 const COVER_GRADIENTS = [
-  'from-rose-300 via-pink-200 to-amber-100',
-  'from-sky-300 via-cyan-200 to-emerald-100',
-  'from-amber-300 via-orange-200 to-rose-100',
-  'from-emerald-300 via-teal-200 to-sky-100',
-  'from-violet-300 via-purple-200 to-pink-100',
-  'from-rose-300 via-fuchsia-200 to-violet-100',
+  'from-amber-100 via-orange-50 to-yellow-100',
+  'from-teal-100 via-emerald-50 to-cyan-100',
+  'from-violet-100 via-purple-50 to-fuchsia-100',
+  'from-sky-100 via-blue-50 to-indigo-100',
+  'from-rose-100 via-pink-50 to-fuchsia-100',
+  'from-lime-100 via-green-50 to-emerald-100',
 ];
 
 const STORY_EMOJIS: Record<string, string> = {
@@ -130,32 +132,32 @@ export function StoryLibrary() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-sky-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50/80 via-orange-50/50 to-teal-50/80">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-rose-100">
+      <div className="sticky top-0 z-10 bg-white/70 backdrop-blur-xl border-b border-amber-100/50">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-rose-400 to-amber-400 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-11 h-11 bg-gradient-to-br from-amber-400 to-orange-400 rounded-2xl flex items-center justify-center shadow-md">
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-rose-900">Маленькие Истории</h1>
-                <p className="text-xs text-rose-500">Сказки с анимацией и озвучкой</p>
+                <h1 className="text-xl font-bold text-amber-900">Маленькие Истории</h1>
+                <p className="text-xs text-amber-600/70">Сказки с анимацией и озвучкой</p>
               </div>
             </div>
             <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="border-rose-200 text-rose-700 hover:bg-rose-50"
+                className="text-amber-700 hover:bg-amber-50 rounded-xl"
                 onClick={() => setCurrentView('settings')}
               >
                 ⚙️
               </Button>
               <Button
                 size="sm"
-                className="bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white shadow-lg"
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md rounded-xl"
                 onClick={() => setCurrentView('editor')}
               >
                 ✨ Новая сказка
@@ -171,8 +173,8 @@ export function StoryLibrary() {
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                   selectedCategory === cat
-                    ? 'bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-md'
-                    : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
+                    : 'bg-white/80 text-amber-800 border border-amber-200/50 hover:bg-amber-50'
                 }`}
               >
                 {cat}
@@ -187,11 +189,11 @@ export function StoryLibrary() {
         {filteredStories.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">📚</div>
-            <h3 className="text-lg font-medium text-rose-800 mb-2">Сказок пока нет</h3>
-            <p className="text-rose-500 mb-6">Добавьте первую сказку, чтобы начать!</p>
+            <h3 className="text-lg font-medium text-amber-800 mb-2">Сказок пока нет</h3>
+            <p className="text-amber-600/70 mb-6">Добавьте первую сказку, чтобы начать!</p>
             <Button
               onClick={() => setCurrentView('editor')}
-              className="bg-gradient-to-r from-rose-500 to-amber-500 text-white"
+              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl"
             >
               ✨ Создать сказку
             </Button>
@@ -206,7 +208,7 @@ export function StoryLibrary() {
                 transition={{ delay: index * 0.05, duration: 0.3 }}
               >
                 <Card
-                  className="cursor-pointer group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                  className="cursor-pointer group overflow-hidden border border-amber-100/30 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 rounded-2xl"
                   onClick={() => handleOpenStory(story)}
                 >
                   <CardContent className="p-0">
@@ -225,11 +227,11 @@ export function StoryLibrary() {
                       {/* Favorite button */}
                       <button
                         onClick={(e) => toggleFavorite(e, story)}
-                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 backdrop-blur flex items-center justify-center shadow-sm hover:bg-white transition-all"
+                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/70 backdrop-blur flex items-center justify-center shadow-sm hover:bg-white transition-all"
                       >
                         <Heart
                           className={`w-4 h-4 transition-all ${
-                            story.isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'
+                            story.isFavorite ? 'fill-orange-500 text-orange-500' : 'text-gray-400'
                           }`}
                         />
                       </button>
@@ -237,7 +239,7 @@ export function StoryLibrary() {
                       {/* Delete button */}
                       <button
                         onClick={(e) => { e.stopPropagation(); setDeleteTarget(story); }}
-                        className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white/60 backdrop-blur flex items-center justify-center shadow-sm hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                        className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white/50 backdrop-blur flex items-center justify-center shadow-sm hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
                       >
                         <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
                       </button>
@@ -253,16 +255,16 @@ export function StoryLibrary() {
                       </div>
 
                       {/* Play overlay */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <div className="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center shadow-xl">
-                          <BookOpen className="w-7 h-7 text-rose-600" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="w-14 h-14 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-xl">
+                          <BookOpen className="w-7 h-7 text-amber-600" />
                         </div>
                       </div>
                     </div>
 
                     {/* Info */}
-                    <div className="p-3 bg-white">
-                      <h3 className="font-bold text-sm text-gray-900 line-clamp-1 mb-1">{story.title}</h3>
+                    <div className="p-3 bg-white/80">
+                      <h3 className="font-bold text-sm text-gray-800 line-clamp-1 mb-1">{story.title}</h3>
                       <div className="flex items-center gap-2 text-xs text-gray-500">
                         <span className="flex items-center gap-0.5">
                           <Clock className="w-3 h-3" />
@@ -274,7 +276,7 @@ export function StoryLibrary() {
                         </span>
                       </div>
                       <div className="mt-1">
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-rose-50 text-rose-600 border-rose-100">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-100">
                           {story.ageRange} лет
                         </Badge>
                       </div>

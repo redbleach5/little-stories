@@ -10,12 +10,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    // Use z-ai-web-dev-sdk to generate image
+    // Use z-ai-web-dev-sdk to generate image with enhanced prompt for quality
     const ZAI = (await import('z-ai-web-dev-sdk')).default;
     const zai = await ZAI.create();
 
+    // Enhanced prompt for professional children's book quality
+    const enhancedPrompt = `Professional children's book illustration, watercolor and ink style, detailed and vibrant, soft warm lighting, whimsical atmosphere, lush background details, expressive characters, textured brushstrokes, published picture book quality: ${prompt}`;
+
     const response = await zai.images.generations.create({
-      prompt: `Children's book illustration, warm and gentle style, cute characters, colorful, child-friendly: ${prompt}`,
+      prompt: enhancedPrompt,
       size: '1024x1024',
     });
 

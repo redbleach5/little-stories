@@ -14,6 +14,7 @@ import {
   VolumeX,
   ChevronLeft,
   RotateCcw,
+  AlertCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useState, useRef } from 'react';
@@ -64,14 +65,14 @@ const ANIMATION_VARIANTS: Record<string, any> = {
   },
 };
 
-// Soft pastel gradients for page illustrations
+// Warm cozy illustration gradients — muted, harmonious
 const ILLUSTRATION_GRADIENTS = [
-  'from-amber-100 via-orange-50 to-yellow-100',
-  'from-teal-100 via-emerald-50 to-cyan-100',
-  'from-violet-100 via-purple-50 to-fuchsia-100',
-  'from-sky-100 via-blue-50 to-indigo-100',
-  'from-lime-100 via-green-50 to-emerald-100',
-  'from-rose-100 via-pink-50 to-fuchsia-100',
+  'from-[#FFF0E0] via-[#FFE4CC] to-[#FFD6B8]',
+  'from-[#E8F5E9] via-[#C8E6C9] to-[#DCEDC8]',
+  'from-[#EDE7F6] via-[#D1C4E9] to-[#E1BEE7]',
+  'from-[#E3F2FD] via-[#BBDEFB] to-[#B3E5FC]',
+  'from-[#FFF8E1] via-[#FFECB3] to-[#FFE082]',
+  'from-[#FCE4EC] via-[#F8BBD0] to-[#F48FB1]',
 ];
 
 const PAGE_EMOJIS = ['🌟', '🏡', '🐰', '🐺', '🐻', '🦊', '🎵', '🌲', '🌈', '🎉', '✨', '💫', '🦋', '🌺', '🍄'];
@@ -80,11 +81,11 @@ function IllustrationPlaceholder({ index }: { index: number }) {
   const emoji = PAGE_EMOJIS[index % PAGE_EMOJIS.length];
   return (
     <div className={`w-full h-full bg-gradient-to-br ${ILLUSTRATION_GRADIENTS[index % ILLUSTRATION_GRADIENTS.length]} flex items-center justify-center relative overflow-hidden`}>
-      <div className="absolute inset-0 opacity-15">
-        <div className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/40 animate-pulse" />
-        <div className="absolute top-12 right-8 w-6 h-6 rounded-full bg-white/30 animate-pulse" style={{ animationDelay: '0.5s' }} />
-        <div className="absolute bottom-8 left-12 w-10 h-10 rounded-full bg-white/20 animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute bottom-4 right-4 w-5 h-5 rounded-full bg-white/35 animate-pulse" style={{ animationDelay: '1.5s' }} />
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-4 left-4 w-12 h-12 rounded-full bg-white/50 animate-pulse" />
+        <div className="absolute top-16 right-10 w-8 h-8 rounded-full bg-white/40 animate-pulse" style={{ animationDelay: '0.5s' }} />
+        <div className="absolute bottom-10 left-16 w-14 h-14 rounded-full bg-white/30 animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute bottom-6 right-6 w-7 h-7 rounded-full bg-white/45 animate-pulse" style={{ animationDelay: '1.5s' }} />
       </div>
       <span className="text-7xl drop-shadow-xl z-10">{emoji}</span>
     </div>
@@ -107,7 +108,7 @@ export function StoryPlayer() {
     setAutoPlay,
   } = useAppStore();
 
-  const { speak, stop, pause, resume } = useTTS();
+  const { speak, stop, pause, resume, ttsAvailable } = useTTS();
   const [showControls, setShowControls] = useState(true);
   const [direction, setDirection] = useState(1);
   const controlsTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -207,8 +208,8 @@ export function StoryPlayer() {
 
   if (!currentStory || !page) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50/80 via-orange-50/50 to-teal-50/80">
-        <p className="text-amber-400">Сказка не найдена</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#FFF9F2] via-[#FFF0E0] to-[#FFE8D6]">
+        <p className="text-warm-brown-light">Сказка не найдена</p>
       </div>
     );
   }
@@ -218,7 +219,15 @@ export function StoryPlayer() {
   const fontSizeClass = fontSize === 'large' ? 'text-xl' : fontSize === 'medium' ? 'text-base' : 'text-sm';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50/80 via-orange-50/50 to-teal-50/80 flex flex-col" onClick={handleScreenTap}>
+    <div className="min-h-screen bg-gradient-to-br from-[#FFF9F2] via-[#FFF0E0] to-[#FFE8D6] flex flex-col" onClick={handleScreenTap}>
+      {/* TTS Unavailable Warning */}
+      {!ttsAvailable && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+          <p className="text-xs text-amber-700">Озвучка недоступна на этом устройстве. Установите синтезатор речи Google.</p>
+        </div>
+      )}
+
       {/* Top bar */}
       <AnimatePresence>
         {showControls && (
@@ -226,23 +235,23 @@ export function StoryPlayer() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b border-amber-100/50 px-4 py-3"
+            className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-[#E8DDD4]/60 px-4 py-3"
           >
             <div className="flex items-center justify-between max-w-2xl mx-auto">
-              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); goBack(); }} className="text-amber-700">
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); goBack(); }} className="text-[#8B6B58]">
                 <ChevronLeft className="w-5 h-5 mr-1" />
-                Библиотека
+                <span className="text-sm">Библиотека</span>
               </Button>
               <div className="text-center">
-                <h2 className="font-bold text-amber-900 text-sm">{currentStory.title}</h2>
-                <p className="text-xs text-amber-500">{currentPage + 1} из {totalPages}</p>
+                <h2 className="font-bold text-[#5C3D2E] text-sm">{currentStory.title}</h2>
+                <p className="text-xs text-[#8B6B58]">{currentPage + 1} из {totalPages}</p>
               </div>
-              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); restart(); }} className="text-amber-700">
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); restart(); }} className="text-[#8B6B58]">
                 <RotateCcw className="w-4 h-4" />
               </Button>
             </div>
             <div className="mt-2 max-w-2xl mx-auto">
-              <Progress value={progress} className="h-1.5 bg-amber-100 [&>[data-slot=indicator]]:bg-gradient-to-r [&>[data-slot=indicator]]:from-amber-400 [&>[data-slot=indicator]]:to-orange-400" />
+              <Progress value={progress} className="h-1.5 bg-[#E8DDD4] [&>[data-slot=indicator]]:bg-gradient-to-r [&>[data-slot=indicator]]:from-[#C4636A] [&>[data-slot=indicator]]:to-[#C9952C]" />
             </div>
           </motion.div>
         )}
@@ -260,7 +269,7 @@ export function StoryPlayer() {
               animate={animVariant.animate}
               exit={animVariant.exit}
               transition={{ duration: page.animationDuration || 1.0 }}
-              className="w-full h-full min-h-[200px] max-h-[400px] rounded-2xl overflow-hidden shadow-xl"
+              className="w-full h-full min-h-[200px] max-h-[400px] rounded-2xl overflow-hidden shadow-xl shadow-[#C4636A]/8"
             >
               {page.illustrationUrl ? (
                 <img
@@ -283,9 +292,9 @@ export function StoryPlayer() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-md p-5 mb-4"
+            className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-md shadow-[#5C3D2E]/5 p-5 mb-4 border border-[#E8DDD4]/40"
           >
-            <p className={`${fontSizeClass} leading-relaxed text-gray-800 whitespace-pre-line`}>
+            <p className={`${fontSizeClass} leading-relaxed text-[#5C3D2E] whitespace-pre-line`}>
               {page.text}
             </p>
           </motion.div>
@@ -298,7 +307,7 @@ export function StoryPlayer() {
               key={i}
               onClick={(e) => { e.stopPropagation(); goToPage(i); }}
               className={`w-2 h-2 rounded-full transition-all ${
-                i === currentPage ? 'w-6 bg-amber-500' : 'bg-amber-200 hover:bg-amber-300'
+                i === currentPage ? 'w-6 bg-[#C4636A]' : 'bg-[#D4C4B0] hover:bg-[#BFA68E]'
               }`}
             />
           ))}
@@ -312,7 +321,7 @@ export function StoryPlayer() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="sticky bottom-0 z-20 bg-white/70 backdrop-blur-xl border-t border-amber-100/50 px-4 py-3"
+            className="sticky bottom-0 z-20 bg-white/80 backdrop-blur-xl border-t border-[#E8DDD4]/60 px-4 py-3"
           >
             <div className="flex items-center justify-between max-w-2xl mx-auto">
               <Button
@@ -320,7 +329,7 @@ export function StoryPlayer() {
                 size="icon"
                 onClick={(e) => { e.stopPropagation(); handlePrev(); }}
                 disabled={currentPage === 0}
-                className="text-amber-700 disabled:opacity-30"
+                className="text-[#8B6B58] disabled:opacity-30"
               >
                 <ArrowLeft className="w-6 h-6" />
               </Button>
@@ -330,7 +339,7 @@ export function StoryPlayer() {
                   variant="ghost"
                   size="icon"
                   onClick={(e) => { e.stopPropagation(); handleStop(); }}
-                  className="text-amber-700"
+                  className="text-[#8B6B58]"
                 >
                   <Square className="w-5 h-5" />
                 </Button>
@@ -338,7 +347,7 @@ export function StoryPlayer() {
                 <Button
                   size="icon"
                   onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-                  className="w-14 h-14 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
+                  className="w-14 h-14 rounded-full bg-gradient-to-br from-[#C4636A] to-[#D47A80] text-white shadow-xl shadow-[#C4636A]/25 hover:shadow-2xl hover:scale-105 transition-all"
                 >
                   {isSpeaking ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
                 </Button>
@@ -347,7 +356,7 @@ export function StoryPlayer() {
                   variant="ghost"
                   size="icon"
                   onClick={(e) => { e.stopPropagation(); setAutoPlay(!autoPlay); }}
-                  className={`text-amber-700 ${autoPlay ? 'bg-amber-100' : ''}`}
+                  className={`text-[#8B6B58] ${autoPlay ? 'bg-[#C4636A]/10' : ''}`}
                 >
                   {autoPlay ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
                 </Button>
@@ -358,7 +367,7 @@ export function StoryPlayer() {
                 size="icon"
                 onClick={(e) => { e.stopPropagation(); handleNext(); }}
                 disabled={currentPage >= totalPages - 1}
-                className="text-amber-700 disabled:opacity-30"
+                className="text-[#8B6B58] disabled:opacity-30"
               >
                 <ArrowRight className="w-6 h-6" />
               </Button>
@@ -366,15 +375,15 @@ export function StoryPlayer() {
 
             {/* Speed control */}
             <div className="flex items-center justify-center gap-2 mt-2 max-w-2xl mx-auto">
-              <span className="text-xs text-amber-500">Скорость:</span>
+              <span className="text-xs text-[#8B6B58]">Скорость:</span>
               {[0.5, 0.75, 1.0, 1.25, 1.5].map(speed => (
                 <button
                   key={speed}
                   onClick={(e) => { e.stopPropagation(); setVoiceSpeed(speed); }}
-                  className={`px-2 py-0.5 rounded text-xs transition-all ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                     voiceSpeed === speed
-                      ? 'bg-amber-500 text-white'
-                      : 'bg-amber-50 text-amber-600 hover:bg-amber-100'
+                      ? 'bg-[#C4636A] text-white shadow-sm'
+                      : 'bg-[#FFF5EB] text-[#8B6B58] hover:bg-[#FFE8D6]'
                   }`}
                 >
                   {speed}x

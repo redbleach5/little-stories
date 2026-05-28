@@ -37,6 +37,7 @@ interface StoryFormData {
   category: string;
   ageRange: string;
   author: string;
+  coverImage: string;
   pages: PageFormData[];
 }
 
@@ -66,6 +67,7 @@ export function StoryEditor() {
     category: 'Русские народные',
     ageRange: '3-6',
     author: '',
+    coverImage: '',
     pages: [
       {
         text: '',
@@ -205,20 +207,20 @@ export function StoryEditor() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-sky-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#FFF9F2] via-[#FFF0E0] to-[#FFE8D6]">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-rose-100 px-4 py-3">
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-[#E8DDD4]/50 px-4 py-3">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
-          <Button variant="ghost" size="sm" onClick={() => setCurrentView('library')} className="text-rose-700">
+          <Button variant="ghost" size="sm" onClick={() => setCurrentView('library')} className="text-[#8B6B58]">
             <ChevronLeft className="w-5 h-5 mr-1" />
             Назад
           </Button>
-          <h2 className="font-bold text-rose-900">Новая сказка</h2>
+          <h2 className="font-bold text-[#5C3D2E]">Новая сказка</h2>
           <Button
             size="sm"
             onClick={saveStory}
             disabled={saving}
-            className="bg-gradient-to-r from-rose-500 to-amber-500 text-white"
+            className="bg-gradient-to-r from-[#C4636A] to-[#C9952C] text-white"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Сохранить'}
           </Button>
@@ -227,38 +229,38 @@ export function StoryEditor() {
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         {/* Story Info */}
-        <Card className="border-0 shadow-md">
+        <Card className="border-0 shadow-md shadow-[#5C3D2E]/5">
           <CardContent className="p-5 space-y-4">
-            <h3 className="font-bold text-rose-900 text-lg flex items-center gap-2">
+            <h3 className="font-bold text-[#5C3D2E] text-lg flex items-center gap-2">
               📖 Информация о сказке
             </h3>
 
             <div>
-              <Label className="text-rose-700">Название</Label>
+              <Label className="text-[#8B6B58]">Название</Label>
               <Input
                 value={formData.title}
                 onChange={e => updateField('title', e.target.value)}
                 placeholder="Введите название сказки..."
-                className="border-rose-200 focus:border-rose-400"
+                className="border-[#E8DDD4] focus:border-[#C4636A] focus:ring-[#C4636A]/20"
               />
             </div>
 
             <div>
-              <Label className="text-rose-700">Описание</Label>
+              <Label className="text-[#8B6B58]">Описание</Label>
               <Textarea
                 value={formData.description}
                 onChange={e => updateField('description', e.target.value)}
                 placeholder="Краткое описание сказки..."
                 rows={2}
-                className="border-rose-200 focus:border-rose-400"
+                className="border-[#E8DDD4] focus:border-[#C4636A] focus:ring-[#C4636A]/20"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-rose-700">Категория</Label>
+                <Label className="text-[#8B6B58]">Категория</Label>
                 <Select value={formData.category} onValueChange={v => updateField('category', v)}>
-                  <SelectTrigger className="border-rose-200">
+                  <SelectTrigger className="border-[#E8DDD4]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -269,9 +271,9 @@ export function StoryEditor() {
                 </Select>
               </div>
               <div>
-                <Label className="text-rose-700">Возраст</Label>
+                <Label className="text-[#8B6B58]">Возраст</Label>
                 <Select value={formData.ageRange} onValueChange={v => updateField('ageRange', v)}>
-                  <SelectTrigger className="border-rose-200">
+                  <SelectTrigger className="border-[#E8DDD4]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -284,24 +286,24 @@ export function StoryEditor() {
             </div>
 
             <div>
-              <Label className="text-rose-700">Автор</Label>
+              <Label className="text-[#8B6B58]">Автор</Label>
               <Input
                 value={formData.author}
                 onChange={e => updateField('author', e.target.value)}
                 placeholder="Имя автора..."
-                className="border-rose-200 focus:border-rose-400"
+                className="border-[#E8DDD4] focus:border-[#C4636A] focus:ring-[#C4636A]/20"
               />
             </div>
 
             {/* Cover Image Generation */}
             <div>
-              <Label className="text-rose-700">Обложка</Label>
+              <Label className="text-[#8B6B58]">Обложка</Label>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   onClick={generateCover}
                   disabled={generatingCover || !formData.title}
-                  className="border-rose-200 text-rose-700"
+                  className="border-[#E8DDD4] text-[#C4636A]"
                 >
                   {generatingCover ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -318,16 +320,16 @@ export function StoryEditor() {
         {/* Pages */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-rose-900 text-lg flex items-center gap-2">
+            <h3 className="font-bold text-[#5C3D2E] text-lg flex items-center gap-2">
               📄 Страницы ({formData.pages.length})
             </h3>
             <Button
               onClick={addPage}
               size="sm"
-              className="bg-gradient-to-r from-rose-500 to-amber-500 text-white"
+              className="bg-gradient-to-r from-[#C4636A] to-[#C9952C] text-white"
             >
               <Plus className="w-4 h-4 mr-1" />
-              Добавить страницу
+              Добавить
             </Button>
           </div>
 
@@ -340,8 +342,8 @@ export function StoryEditor() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.2 }}
               >
-                <Card className="border-0 shadow-md overflow-hidden">
-                  <div className="bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2 flex items-center justify-between">
+                <Card className="border-0 shadow-md shadow-[#5C3D2E]/5 overflow-hidden">
+                  <div className="bg-gradient-to-r from-[#C4636A] to-[#C9952C] px-4 py-2 flex items-center justify-between">
                     <span className="text-white font-medium text-sm">Страница {index + 1}</span>
                     <div className="flex items-center gap-1">
                       <Button
@@ -375,31 +377,31 @@ export function StoryEditor() {
                   </div>
                   <CardContent className="p-4 space-y-3">
                     <div>
-                      <Label className="text-rose-700 text-xs">Текст страницы</Label>
+                      <Label className="text-[#8B6B58] text-xs">Текст страницы</Label>
                       <Textarea
                         value={page.text}
                         onChange={e => updatePage(index, 'text', e.target.value)}
                         placeholder="Текст сказки на этой странице..."
                         rows={3}
-                        className="border-rose-200 focus:border-rose-400 text-sm"
+                        className="border-[#E8DDD4] focus:border-[#C4636A] text-sm"
                       />
                     </div>
 
                     <div>
-                      <Label className="text-rose-700 text-xs">Описание иллюстрации</Label>
+                      <Label className="text-[#8B6B58] text-xs">Описание иллюстрации</Label>
                       <div className="flex gap-2">
                         <Input
                           value={page.illustrationPrompt}
                           onChange={e => updatePage(index, 'illustrationPrompt', e.target.value)}
                           placeholder="Опишите иллюстрацию для AI..."
-                          className="border-rose-200 focus:border-rose-400 text-sm"
+                          className="border-[#E8DDD4] focus:border-[#C4636A] text-sm"
                         />
                         <Button
                           variant="outline"
                           size="icon"
                           onClick={() => generateIllustration(index)}
                           disabled={generatingImage === index || !page.illustrationPrompt}
-                          className="border-rose-200 text-rose-600 shrink-0"
+                          className="border-[#E8DDD4] text-[#C4636A] shrink-0"
                         >
                           {generatingImage === index ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -422,12 +424,12 @@ export function StoryEditor() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-rose-700 text-xs">Анимация</Label>
+                        <Label className="text-[#8B6B58] text-xs">Анимация</Label>
                         <Select
                           value={page.animationType}
                           onValueChange={v => updatePage(index, 'animationType', v)}
                         >
-                          <SelectTrigger className="border-rose-200 text-sm h-9">
+                          <SelectTrigger className="border-[#E8DDD4] text-sm h-9">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -440,7 +442,7 @@ export function StoryEditor() {
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-rose-700 text-xs">Длительность (сек)</Label>
+                        <Label className="text-[#8B6B58] text-xs">Длительность (сек)</Label>
                         <Input
                           type="number"
                           value={page.animationDuration}
@@ -448,7 +450,7 @@ export function StoryEditor() {
                           step={0.5}
                           min={0.5}
                           max={5}
-                          className="border-rose-200 focus:border-rose-400 text-sm h-9"
+                          className="border-[#E8DDD4] focus:border-[#C4636A] text-sm h-9"
                         />
                       </div>
                     </div>
@@ -461,7 +463,7 @@ export function StoryEditor() {
           <Button
             onClick={addPage}
             variant="outline"
-            className="w-full border-dashed border-2 border-rose-300 text-rose-500 hover:bg-rose-50 hover:border-rose-400 h-14"
+            className="w-full border-dashed border-2 border-[#D4C4B0] text-[#8B6B58] hover:bg-[#FFF5EB] hover:border-[#C4636A]/40 h-14"
           >
             <Plus className="w-5 h-5 mr-2" />
             Добавить страницу
@@ -473,7 +475,7 @@ export function StoryEditor() {
           <Button
             onClick={saveStory}
             disabled={saving}
-            className="w-full h-12 bg-gradient-to-r from-rose-500 to-amber-500 text-white text-lg font-bold shadow-xl hover:shadow-2xl"
+            className="w-full h-12 bg-gradient-to-r from-[#C4636A] to-[#C9952C] text-white text-lg font-bold shadow-xl shadow-[#C4636A]/15 hover:shadow-2xl"
           >
             {saving ? (
               <Loader2 className="w-6 h-6 animate-spin mr-2" />

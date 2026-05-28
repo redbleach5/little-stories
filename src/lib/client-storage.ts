@@ -10,6 +10,7 @@ interface DemoPage {
   illustrationPrompt: string;
   animationType: string;
   animationDuration: number;
+  audioUrl?: string; // Pre-recorded audio file path
 }
 
 interface DemoStory {
@@ -22,6 +23,15 @@ interface DemoStory {
   coverImage: string;
   pages: DemoPage[];
 }
+
+// Audio file mapping: story key -> audio prefix
+const AUDIO_MAP: Record<string, string> = {
+  'Колобок': 'kolobok',
+  'Теремок': 'teremok',
+  'Репка': 'repka',
+  'Курочка Ряба': 'ryaba',
+  'Маша и Медведь': 'masha',
+};
 
 const DEMO_STORIES: DemoStory[] = [
   {
@@ -368,6 +378,7 @@ function generateId(): string {
 }
 
 function demoToStory(demo: DemoStory, index: number): Story {
+  const audioPrefix = AUDIO_MAP[demo.title];
   return {
     id: `demo-${index + 1}`,
     title: demo.title,
@@ -387,6 +398,7 @@ function demoToStory(demo: DemoStory, index: number): Story {
       illustrationPrompt: p.illustrationPrompt,
       animationType: p.animationType,
       animationDuration: p.animationDuration,
+      audioUrl: p.audioUrl || (audioPrefix ? `/audio/${audioPrefix}_${String(p.pageNumber).padStart(2, '0')}.mp3` : undefined),
     })),
   };
 }

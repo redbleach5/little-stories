@@ -8,12 +8,10 @@ import { useAppStore } from '@/store/useAppStore';
 function isNativePlatform(): boolean {
   if (typeof window === 'undefined') return false;
   try {
-    // Capacitor 8: check the global Capacitor object
     const cap = (window as any).Capacitor;
     if (cap && typeof cap.isNativePlatform === 'function') {
       return cap.isNativePlatform();
     }
-    // Fallback: check if running in Android WebView
     if (cap && cap.platform === 'android') return true;
     if (cap && cap.isNative === true) return true;
     return false;
@@ -24,7 +22,7 @@ function isNativePlatform(): boolean {
 
 // ── Capacitor TTS Plugin Loader ─────────────────────────────────────────────
 
-let _ttsPlugin: any = undefined; // undefined = not loaded, null = unavailable, object = loaded
+let _ttsPlugin: any = undefined;
 
 async function getTTSPlugin() {
   if (_ttsPlugin !== undefined) return _ttsPlugin;
@@ -43,11 +41,29 @@ async function getTTSPlugin() {
   }
 }
 
+// ── Audio Player for Pre-recorded Files ─────────────────────────────────────
+
+let _audioElement: HTMLAudioElement | null = null;
+
+function getAudioElement(): HTMLAudioElement {
+  if (!_audioElement) {
+    _audioElement = new Audio();
+  }
+  return _audioElement;
+}
+
 // ── Warm Storytelling Parameters ────────────────────────────────────────────
 
-// Slower rate and slightly lower pitch for warm, atmospheric storytelling
 const STORY_RATE_MULTIPLIER = 0.82;
 const STORY_PITCH = 0.92;
+
+// ── TTS Check Result ────────────────────────────────────────────────────────
+
+export interface TTSCheckResult {
+  available: boolean;
+  hasRussianVoice: boolean;
+  isNative: boolean;
+}
 
 // ── TTS Hook ────────────────────────────────────────────────────────────────
 
@@ -58,26 +74,20 @@ export function useTTS() {
   const [ttsAvailable, setTtsAvailable] = useState(true);
   const speakingRef = useRef(false);
   const stopRequestedRef = useRef(false);
+  const audioPlayingRef = useRef(false);
 
   useEffect(() => {
     const native = isNativePlatform();
     setIsNative(native);
     if (native) {
-      // Pre-load the TTS plugin
       getTTSPlugin().then(plugin => {
         setTtsAvailable(!!plugin);
-        if (plugin) {
-          // Warm up the TTS engine with a silent speak
-          plugin.speak({ text: ' ', lang: 'ru-RU', rate: 1.0, pitch: 1.0, volume: 0 }).catch(() => {});
-        }
       });
     } else {
-      // Check Web Speech API availability
       if (typeof window !== 'undefined') {
         const hasWebSpeech = !!window.speechSynthesis;
         setTtsAvailable(hasWebSpeech);
         if (hasWebSpeech) {
-          // Pre-load voices (they load asynchronously in some browsers)
           window.speechSynthesis.getVoices();
           window.speechSynthesis.onvoiceschanged = () => {
             window.speechSynthesis.getVoices();
@@ -87,19 +97,75 @@ export function useTTS() {
     }
   }, []);
 
-  const speak = useCallback(async (text: string, onEnd?: () => void) => {
+  // ── Play pre-recorded audio file ────────────────────────────────────
+
+  const playAudio = useCallback(async (audioUrl: string, onEnd?: () => void): Promise<boolean> => {
+    return new Promise((resolve) => {
+      try {
+        const audio = getAudioElement();
+        audio.src = audioUrl;
+        audio.playbackRate = Math.max(0.5, Math.min(2.0, voiceSpeed * 0.9));
+        audio.volume = 1.0;
+        audioPlayingRef.current = true;
+        speakingRef.current = true;
+        stopRequestedRef.current = false;
+        setIsSpeaking(true);
+
+        const cleanup = () => {
+          audioPlayingRef.current = false;
+          speakingRef.current = false;
+          setIsSpeaking(false);
+          audio.onended = null;
+          audio.onerror = null;
+        };
+
+        audio.onended = () => {
+          cleanup();
+          if (!stopRequestedRef.current) {
+            onEnd?.();
+          }
+          resolve(true);
+        };
+
+        audio.onerror = () => {
+          console.warn('Audio playback failed:', audioUrl);
+          cleanup();
+          resolve(false);
+        };
+
+        audio.play().catch(() => {
+          console.warn('Audio play() failed (autoplay policy?):', audioUrl);
+          cleanup();
+          resolve(false);
+        });
+      } catch {
+        resolve(false);
+      }
+    });
+  }, [voiceSpeed, setIsSpeaking]);
+
+  // ── Main speak function ─────────────────────────────────────────────
+
+  const speak = useCallback(async (text: string, onEnd?: () => void, audioUrl?: string) => {
     stopRequestedRef.current = false;
+
+    // Priority 1: Pre-recorded audio file (guaranteed quality)
+    if (audioUrl) {
+      const success = await playAudio(audioUrl, onEnd);
+      if (success) return;
+      // If pre-recorded failed, fall through to TTS
+    }
+
     speakingRef.current = true;
     setIsSpeaking(true);
 
-    // Try Capacitor native TTS first (works in APK)
+    // Priority 2: Capacitor native TTS (works in APK)
     if (isNative) {
       try {
         const tts = await getTTSPlugin();
         if (tts) {
           const effectiveRate = Math.max(0.1, voiceSpeed * STORY_RATE_MULTIPLIER);
           try {
-            // Capacitor TTS v8: speak() resolves when speech finishes
             await tts.speak({
               text,
               lang: 'ru-RU',
@@ -109,7 +175,6 @@ export function useTTS() {
               category: 'playback',
             });
 
-            // If stop was requested during speech, don't call onEnd
             if (stopRequestedRef.current) {
               speakingRef.current = false;
               setIsSpeaking(false);
@@ -122,7 +187,6 @@ export function useTTS() {
             return;
           } catch (speakErr) {
             console.warn('Capacitor TTS speak failed:', speakErr);
-            // Don't fall through to Web Speech API in native mode - it won't work
             speakingRef.current = false;
             setIsSpeaking(false);
             return;
@@ -133,7 +197,7 @@ export function useTTS() {
       }
     }
 
-    // Fallback: Web Speech API (works in browser)
+    // Priority 3: Web Speech API (works in browser)
     if (typeof window === 'undefined' || !window.speechSynthesis) {
       console.warn('No TTS available');
       speakingRef.current = false;
@@ -143,21 +207,12 @@ export function useTTS() {
 
     window.speechSynthesis.cancel();
 
-    // Split text into sentences for more natural pausing
     const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
-
-    // Find the best Russian voice
     const voices = window.speechSynthesis.getVoices();
     const russianVoices = voices.filter(v => v.lang.startsWith('ru'));
-
-    // Prefer neural/high-quality voices
     const bestVoice = russianVoices.find(v =>
-      v.name.toLowerCase().includes('neural') ||
-      v.name.toLowerCase().includes('premium') ||
-      v.name.toLowerCase().includes('enhanced')
-    ) || russianVoices.find(v =>
-      v.name.toLowerCase().includes('google')
-    ) || russianVoices[0] || undefined;
+      v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('premium')
+    ) || russianVoices.find(v => v.name.toLowerCase().includes('google')) || russianVoices[0] || undefined;
 
     const speakSentences = async (sentences: string[], index: number) => {
       if (index >= sentences.length || stopRequestedRef.current) {
@@ -175,14 +230,9 @@ export function useTTS() {
       if (bestVoice) utterance.voice = bestVoice;
 
       utterance.onend = () => {
-        // Small pause between sentences for natural feel
-        setTimeout(() => {
-          speakSentences(sentences, index + 1);
-        }, 180);
+        setTimeout(() => { speakSentences(sentences, index + 1); }, 180);
       };
-
-      utterance.onerror = (e) => {
-        console.warn('Speech error:', e);
+      utterance.onerror = () => {
         speakingRef.current = false;
         setIsSpeaking(false);
       };
@@ -192,22 +242,30 @@ export function useTTS() {
     };
 
     speakSentences(sentences, 0);
-  }, [voiceSpeed, setIsSpeaking, isNative]);
+  }, [voiceSpeed, setIsSpeaking, isNative, playAudio]);
+
+  // ── Stop ────────────────────────────────────────────────────────────
 
   const stop = useCallback(async () => {
     stopRequestedRef.current = true;
     speakingRef.current = false;
 
-    // Stop Capacitor native TTS
+    // Stop pre-recorded audio
+    if (audioPlayingRef.current) {
+      try {
+        const audio = getAudioElement();
+        audio.pause();
+        audio.currentTime = 0;
+      } catch { /* ignore */ }
+      audioPlayingRef.current = false;
+    }
+
+    // Stop Capacitor TTS
     if (isNative) {
       try {
         const tts = await getTTSPlugin();
-        if (tts) {
-          await tts.stop();
-        }
-      } catch {
-        // ignore
-      }
+        if (tts) await tts.stop();
+      } catch { /* ignore */ }
     }
 
     // Stop Web Speech API
@@ -219,38 +277,97 @@ export function useTTS() {
     setIsPlaying(false);
   }, [setIsSpeaking, setIsPlaying, isNative]);
 
+  // ── Pause / Resume ──────────────────────────────────────────────────
+
   const pause = useCallback(async () => {
+    if (audioPlayingRef.current) {
+      try {
+        getAudioElement().pause();
+      } catch { /* ignore */ }
+      return;
+    }
     if (isNative) {
       try {
         const tts = await getTTSPlugin();
-        if (tts) {
-          // Capacitor TTS v8 doesn't have pause, so we stop
-          stopRequestedRef.current = true;
-          await tts.stop();
-          speakingRef.current = false;
-          setIsSpeaking(false);
-        }
-      } catch {
-        // ignore
-      }
+        if (tts) { stopRequestedRef.current = true; await tts.stop(); }
+      } catch { /* ignore */ }
     }
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.pause();
     }
-  }, [isNative, setIsSpeaking]);
+  }, [isNative]);
 
   const resume = useCallback(() => {
+    if (audioPlayingRef.current) {
+      try {
+        getAudioElement().play();
+      } catch { /* ignore */ }
+      return;
+    }
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.resume();
     }
   }, []);
 
-  // Cleanup on unmount
+  // ── Check TTS availability ──────────────────────────────────────────
+
+  const checkTTS = useCallback(async (): Promise<TTSCheckResult> => {
+    const native = isNativePlatform();
+
+    if (native) {
+      const tts = await getTTSPlugin();
+      if (tts) {
+        try {
+          const langs = await tts.getSupportedLanguages?.();
+          const hasRu = Array.isArray(langs) && langs.some((l: string) => l.startsWith('ru'));
+          return { available: true, hasRussianVoice: !!hasRu, isNative: true };
+        } catch {
+          return { available: true, hasRussianVoice: true, isNative: true }; // Assume available
+        }
+      }
+      return { available: false, hasRussianVoice: false, isNative: true };
+    }
+
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      const voices = window.speechSynthesis.getVoices();
+      const hasRu = voices.some(v => v.lang.startsWith('ru'));
+      return { available: true, hasRussianVoice: hasRu, isNative: false };
+    }
+
+    return { available: false, hasRussianVoice: false, isNative: false };
+  }, []);
+
+  // ── Open TTS install/settings ───────────────────────────────────────
+
+  const openTTSInstall = useCallback(async () => {
+    if (isNativePlatform()) {
+      try {
+        const tts = await getTTSPlugin();
+        if (tts && tts.openInstall) {
+          await tts.openInstall();
+          return;
+        }
+      } catch (err) {
+        console.warn('Could not open TTS install:', err);
+      }
+    }
+    // Fallback: open Google Play Store for Google TTS
+    if (typeof window !== 'undefined') {
+      window.open('https://play.google.com/store/apps/details?id=com.google.android.tts', '_blank');
+    }
+  }, []);
+
+  // ── Cleanup ─────────────────────────────────────────────────────────
+
   useEffect(() => {
     return () => {
       stopRequestedRef.current = true;
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel();
+      }
+      if (_audioElement) {
+        _audioElement.pause();
+        _audioElement = null;
       }
     };
   }, []);
@@ -260,6 +377,8 @@ export function useTTS() {
     stop,
     pause,
     resume,
+    checkTTS,
+    openTTSInstall,
     ttsAvailable,
     isNative,
   };

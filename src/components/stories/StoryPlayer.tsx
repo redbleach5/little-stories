@@ -141,7 +141,7 @@ export function StoryPlayer() {
     setIsPlaying(true);
     speak(page.text, () => {
       handleAutoPlayNext();
-    });
+    }, page.audioUrl);
   }, [page, speak, setIsPlaying, handleAutoPlayNext]);
 
   const togglePlay = useCallback(() => {

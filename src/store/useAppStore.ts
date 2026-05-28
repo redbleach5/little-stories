@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ViewType = 'library' | 'player' | 'editor' | 'settings';
+export type ViewType = 'library' | 'player' | 'editor' | 'settings' | 'onboarding';
 
 export interface StoryPage {
   id: string;
@@ -10,6 +10,7 @@ export interface StoryPage {
   illustrationPrompt: string;
   animationType: string;
   animationDuration: number;
+  audioUrl?: string; // Pre-recorded audio for this page
 }
 
 export interface Story {

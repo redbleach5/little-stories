@@ -48,14 +48,15 @@ let _audioElement: HTMLAudioElement | null = null;
 function getAudioElement(): HTMLAudioElement {
   if (!_audioElement) {
     _audioElement = new Audio();
+    _audioElement.preload = 'auto';
   }
   return _audioElement;
 }
 
-// ── Warm Storytelling Parameters ────────────────────────────────────────────
+// ── Warm Storytelling Parameters for native TTS fallback ────────────────────
 
-const STORY_RATE_MULTIPLIER = 0.82;
-const STORY_PITCH = 0.92;
+const STORY_RATE_MULTIPLIER = 0.85;
+const STORY_PITCH = 0.95;
 
 // ── TTS Check Result ────────────────────────────────────────────────────────
 
@@ -75,6 +76,7 @@ export function useTTS() {
   const speakingRef = useRef(false);
   const stopRequestedRef = useRef(false);
   const audioPlayingRef = useRef(false);
+  const currentAudioUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     const native = isNativePlatform();
@@ -103,17 +105,28 @@ export function useTTS() {
     return new Promise((resolve) => {
       try {
         const audio = getAudioElement();
+
+        // If same audio is already loaded and playing, don't restart
+        if (audioPlayingRef.current && currentAudioUrlRef.current === audioUrl) {
+          resolve(true);
+          return;
+        }
+
         audio.src = audioUrl;
-        audio.playbackRate = Math.max(0.5, Math.min(2.0, voiceSpeed * 0.9));
+        // Neural TTS audio is already at natural storytelling pace;
+        // apply speed adjustment more gently to preserve quality
+        audio.playbackRate = Math.max(0.5, Math.min(2.0, voiceSpeed));
         audio.volume = 1.0;
         audioPlayingRef.current = true;
         speakingRef.current = true;
         stopRequestedRef.current = false;
+        currentAudioUrlRef.current = audioUrl;
         setIsSpeaking(true);
 
         const cleanup = () => {
           audioPlayingRef.current = false;
           speakingRef.current = false;
+          currentAudioUrlRef.current = null;
           setIsSpeaking(false);
           audio.onended = null;
           audio.onerror = null;
@@ -149,11 +162,12 @@ export function useTTS() {
   const speak = useCallback(async (text: string, onEnd?: () => void, audioUrl?: string) => {
     stopRequestedRef.current = false;
 
-    // Priority 1: Pre-recorded audio file (guaranteed quality)
+    // Priority 1: Pre-recorded audio file (neural TTS quality)
     if (audioUrl) {
       const success = await playAudio(audioUrl, onEnd);
       if (success) return;
-      // If pre-recorded failed, fall through to TTS
+      // If pre-recorded failed, fall through to live TTS
+      console.info('Pre-recorded audio unavailable, falling back to live TTS');
     }
 
     speakingRef.current = true;
@@ -230,7 +244,7 @@ export function useTTS() {
       if (bestVoice) utterance.voice = bestVoice;
 
       utterance.onend = () => {
-        setTimeout(() => { speakSentences(sentences, index + 1); }, 180);
+        setTimeout(() => { speakSentences(sentences, index + 1); }, 200);
       };
       utterance.onerror = () => {
         speakingRef.current = false;
@@ -258,6 +272,7 @@ export function useTTS() {
         audio.currentTime = 0;
       } catch { /* ignore */ }
       audioPlayingRef.current = false;
+      currentAudioUrlRef.current = null;
     }
 
     // Stop Capacitor TTS
@@ -322,7 +337,7 @@ export function useTTS() {
           const hasRu = Array.isArray(langs) && langs.some((l: string) => l.startsWith('ru'));
           return { available: true, hasRussianVoice: !!hasRu, isNative: true };
         } catch {
-          return { available: true, hasRussianVoice: true, isNative: true }; // Assume available
+          return { available: true, hasRussianVoice: true, isNative: true };
         }
       }
       return { available: false, hasRussianVoice: false, isNative: true };
@@ -351,7 +366,6 @@ export function useTTS() {
         console.warn('Could not open TTS install:', err);
       }
     }
-    // Fallback: open Google Play Store for Google TTS
     if (typeof window !== 'undefined') {
       window.open('https://play.google.com/store/apps/details?id=com.google.android.tts', '_blank');
     }

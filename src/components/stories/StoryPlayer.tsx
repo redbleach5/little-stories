@@ -137,7 +137,10 @@ export function StoryPlayer() {
   }, [autoPlay, currentPage, totalPages, goToPage, setIsPlaying]);
 
   const speakPage = useCallback(() => {
-    if (!page) return;
+    if (!page) {
+      console.warn('speakPage: no page available');
+      return;
+    }
     setIsPlaying(true);
     speak(page.text, () => {
       handleAutoPlayNext();
@@ -146,11 +149,15 @@ export function StoryPlayer() {
 
   const togglePlay = useCallback(() => {
     if (isSpeaking) {
+      // Currently speaking - pause
       pause();
       setIsPlaying(false);
     } else if (isPlaying) {
+      // Playing but paused - resume audio
       resume();
+      setIsSpeaking(true);
     } else {
+      // Not playing - start
       speakPage();
     }
   }, [isSpeaking, isPlaying, pause, resume, speakPage, setIsPlaying]);
@@ -181,15 +188,15 @@ export function StoryPlayer() {
     setCurrentView('library');
   }, [stop, setCurrentView]);
 
-  // Auto-play current page on load
+  // Auto-play current page on page change when autoplay is on
   useEffect(() => {
-    if (autoPlay && page && !isSpeaking) {
+    if (autoPlay && page && !isSpeaking && !isPlaying) {
       const timer = setTimeout(() => {
         speakPage();
-      }, 1000);
+      }, 1200);
       return () => clearTimeout(timer);
     }
-  }, [currentPage, autoPlay]);
+  }, [currentPage, autoPlay]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show/hide controls on tap
   const handleScreenTap = useCallback(() => {

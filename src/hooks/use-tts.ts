@@ -42,6 +42,7 @@ async function getTTSPlugin() {
 }
 
 // ── Audio Player for Pre-recorded Files ─────────────────────────────────────
+// Robust singleton audio element with proper state management
 
 let _audioElement: HTMLAudioElement | null = null;
 
@@ -53,10 +54,28 @@ function getAudioElement(): HTMLAudioElement {
   return _audioElement;
 }
 
+/** Fully reset the audio element to a clean state */
+function resetAudioElement(): HTMLAudioElement {
+  const audio = getAudioElement();
+  try {
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.currentTime = 0;
+    audio.onended = null;
+    audio.onerror = null;
+    audio.onloadeddata = null;
+    audio.oncanplay = null;
+    // Force release of any pending resources
+    audio.load();
+  } catch { /* ignore */ }
+  return audio;
+}
+
 // ── Warm Storytelling Parameters for native TTS fallback ────────────────────
 
 const STORY_RATE_MULTIPLIER = 0.85;
 const STORY_PITCH = 0.95;
+const AUDIO_LOAD_TIMEOUT_MS = 10000; // 10s timeout for audio loading
 
 // ── TTS Check Result ────────────────────────────────────────────────────────
 
@@ -77,6 +96,7 @@ export function useTTS() {
   const stopRequestedRef = useRef(false);
   const audioPlayingRef = useRef(false);
   const currentAudioUrlRef = useRef<string | null>(null);
+  const audioTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const native = isNativePlatform();
@@ -104,7 +124,14 @@ export function useTTS() {
   const playAudio = useCallback(async (audioUrl: string, onEnd?: () => void): Promise<boolean> => {
     return new Promise((resolve) => {
       try {
-        const audio = getAudioElement();
+        // Clear any existing timeout
+        if (audioTimeoutRef.current) {
+          clearTimeout(audioTimeoutRef.current);
+          audioTimeoutRef.current = null;
+        }
+
+        // Reset the audio element to a clean state before loading new source
+        const audio = resetAudioElement();
 
         // If same audio is already loaded and playing, don't restart
         if (audioPlayingRef.current && currentAudioUrlRef.current === audioUrl) {
@@ -112,11 +139,6 @@ export function useTTS() {
           return;
         }
 
-        audio.src = audioUrl;
-        // Neural TTS audio is already at natural storytelling pace;
-        // apply speed adjustment more gently to preserve quality
-        audio.playbackRate = Math.max(0.5, Math.min(2.0, voiceSpeed));
-        audio.volume = 1.0;
         audioPlayingRef.current = true;
         speakingRef.current = true;
         stopRequestedRef.current = false;
@@ -124,15 +146,21 @@ export function useTTS() {
         setIsSpeaking(true);
 
         const cleanup = () => {
+          if (audioTimeoutRef.current) {
+            clearTimeout(audioTimeoutRef.current);
+            audioTimeoutRef.current = null;
+          }
           audioPlayingRef.current = false;
           speakingRef.current = false;
           currentAudioUrlRef.current = null;
           setIsSpeaking(false);
           audio.onended = null;
           audio.onerror = null;
+          audio.onloadeddata = null;
+          audio.oncanplay = null;
         };
 
-        audio.onended = () => {
+        const handleSuccess = () => {
           cleanup();
           if (!stopRequestedRef.current) {
             onEnd?.();
@@ -140,18 +168,56 @@ export function useTTS() {
           resolve(true);
         };
 
-        audio.onerror = () => {
-          console.warn('Audio playback failed:', audioUrl);
+        const handleFailure = (reason: string) => {
+          console.warn(`Audio playback failed (${reason}):`, audioUrl);
           cleanup();
           resolve(false);
         };
 
-        audio.play().catch(() => {
-          console.warn('Audio play() failed (autoplay policy?):', audioUrl);
-          cleanup();
-          resolve(false);
-        });
-      } catch {
+        // Set up event handlers BEFORE setting src
+        audio.onended = () => handleSuccess();
+        audio.onerror = () => handleFailure('onerror');
+
+        // Set loading timeout - if audio doesn't start playing within timeout, fail
+        audioTimeoutRef.current = setTimeout(() => {
+          if (audioPlayingRef.current && !audio.paused && audio.readyState < 2) {
+            handleFailure('load_timeout');
+          }
+        }, AUDIO_LOAD_TIMEOUT_MS);
+
+        // Set source and load
+        audio.src = audioUrl;
+        audio.playbackRate = Math.max(0.5, Math.min(2.0, voiceSpeed));
+        audio.volume = 1.0;
+
+        // Use canplay event for more reliable playback start
+        const startPlay = () => {
+          audio.play().then(() => {
+            // Audio started playing successfully
+            // Clear the load timeout since we're playing now
+            if (audioTimeoutRef.current) {
+              clearTimeout(audioTimeoutRef.current);
+              audioTimeoutRef.current = null;
+            }
+          }).catch((err) => {
+            handleFailure(`play_rejected: ${err?.message || 'unknown'}`);
+          });
+        };
+
+        // Wait for audio to be ready before playing
+        if (audio.readyState >= 3) {
+          // Already loaded (cached)
+          startPlay();
+        } else {
+          audio.oncanplay = () => {
+            audio.oncanplay = null;
+            startPlay();
+          };
+          // Also handle load error
+          audio.load();
+        }
+      } catch (err) {
+        console.warn('Audio playback exception:', err);
         resolve(false);
       }
     });
@@ -264,6 +330,12 @@ export function useTTS() {
     stopRequestedRef.current = true;
     speakingRef.current = false;
 
+    // Clear timeout
+    if (audioTimeoutRef.current) {
+      clearTimeout(audioTimeoutRef.current);
+      audioTimeoutRef.current = null;
+    }
+
     // Stop pre-recorded audio
     if (audioPlayingRef.current) {
       try {
@@ -297,7 +369,10 @@ export function useTTS() {
   const pause = useCallback(async () => {
     if (audioPlayingRef.current) {
       try {
-        getAudioElement().pause();
+        const audio = getAudioElement();
+        audio.pause();
+        // Keep audioPlayingRef as true so we know audio is loaded
+        // Just mark that we're paused, not speaking
       } catch { /* ignore */ }
       return;
     }
@@ -315,7 +390,10 @@ export function useTTS() {
   const resume = useCallback(() => {
     if (audioPlayingRef.current) {
       try {
-        getAudioElement().play();
+        const audio = getAudioElement();
+        if (audio.src && audio.paused) {
+          audio.play().catch(() => { /* ignore */ });
+        }
       } catch { /* ignore */ }
       return;
     }
@@ -376,11 +454,15 @@ export function useTTS() {
   useEffect(() => {
     return () => {
       stopRequestedRef.current = true;
+      if (audioTimeoutRef.current) {
+        clearTimeout(audioTimeoutRef.current);
+      }
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
       if (_audioElement) {
         _audioElement.pause();
+        _audioElement.removeAttribute('src');
         _audioElement = null;
       }
     };

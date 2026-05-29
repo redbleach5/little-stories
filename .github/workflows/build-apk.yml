@@ -30,14 +30,16 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Setup database
-        run: bun run db:push
-
       - name: Build static export
         run: |
-          mv src/app/api src/app/_api_backup
+          # Temporarily move API routes (not compatible with static export)
+          if [ -d "src/app/api" ]; then
+            mv src/app/api src/app/_api_backup
+          fi
           BUILD_TARGET=apk bun run build
-          mv src/app/_api_backup src/app/api
+          if [ -d "src/app/_api_backup" ]; then
+            mv src/app/_api_backup src/app/api
+          fi
 
       - name: Sync Capacitor
         run: npx cap sync android
@@ -65,5 +67,8 @@ jobs:
             1. Скачайте `app-debug.apk`
             2. Разрешите установку из неизвестных источников
             3. Установите приложение
+
+            ### Озвучка
+            Встроенная нейронная озвучка (Microsoft Edge Neural TTS, голос Светлана) — работает офлайн, без интернета и установки дополнительных компонентов.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -23,3 +23,28 @@ Stage Summary:
 - Audio size: 2.6MB → 4.9MB (higher quality)
 - APK built successfully: app-debug.apk (10.3MB) at https://github.com/redbleach5/little-stories/releases/tag/v1.2.0
 - 3-tier fallback system: Neural Audio → Capacitor TTS → Web Speech API
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Replace edge-tts with high-quality neural TTS using z-ai-web-dev-sdk
+
+Work Log:
+- Investigated available TTS solutions: SDK TTS (tongtong/luodo voices), Silero TTS (too slow on CPU), edge-tts (rejected by user)
+- Discovered z-ai-web-dev-sdk has audio.tts API with 7 voices including tongtong (warm) and luodo (expressive)
+- Tested SDK TTS with Russian text - works well, generates WAV at 24kHz
+- Built emotional segmentation system: different speed/volume/voice per story segment type
+- Generated all 40 audio files (5 stories × 8-10 pages each) with dramatic pacing
+- Implemented retry logic with exponential backoff for API rate limiting
+- Used FFmpeg for concatenating segments with dramatic silence pauses
+- Pushed v1.3.0 to GitHub, CI build started
+
+Stage Summary:
+- Replaced edge-tts (SvetlanaNeural) with z-ai-web-dev-sdk TTS (tongtong + luodo voices)
+- Key improvement: emotional segmentation with 6 emotion types + different voices
+- Narration: tongtong at 0.72 speed (warm, slow)
+- Dramatic: luodo at 0.60 speed (tense, quiet)
+- Exclamation: luodo at 0.85 speed (emphatic)
+- Song: tongtong at 0.55 speed (slow, melodic)
+- 40 MP3 files generated, total ~9.8MB
+- v1.3.0 tag pushed, APK build in progress

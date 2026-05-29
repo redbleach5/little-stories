@@ -120,7 +120,7 @@ export function StorySettings() {
               Создавайте свои сказки с иллюстрациями, генерируемыми искусственным интеллектом!
             </p>
             <div className="mt-3 flex gap-2">
-              <span className="text-xs bg-[#FFE8D6] text-[#A0522D] px-2 py-1 rounded">v1.2.1</span>
+              <span className="text-xs bg-[#FFE8D6] text-[#A0522D] px-2 py-1 rounded">v1.2.2</span>
               <span className="text-xs bg-[#E8B4F8] text-[#7B1FA2] px-2 py-1 rounded">Neural TTS</span>
               <span className="text-xs bg-[#C8E6C9] text-[#2E7D32] px-2 py-1 rounded">PWA</span>
             </div>

@@ -55,3 +55,6 @@ worklog.md
 agent-ctx/
 mini-services/
 examples/
+.piper/
+.silero/
+asset/
